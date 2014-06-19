@@ -28,7 +28,7 @@ def gn(origGraph):
 		edge_betweennesses = G.edge_betweenness()
 
 		# returns an arbitrary index if there is a tie at max.
-		# TODO: find which index argmax actually returns.
+		# TODO: check if numpy copies array,
 		max_index = numpy.argmax(edge_betweennesses) #check if numpy copies array
 
 		# edge with the max betweenness
@@ -43,7 +43,8 @@ def gn(origGraph):
 
 	vd = createDendrogram(origGraph, splits)
 
-	vd.optimal_count # TODO: make bug report
+	# TODO: make bug report. If we don't call this then as_clustering() fails.
+	vd.optimal_count 
 
 	return vd
 
@@ -70,8 +71,7 @@ def createDendrogram(G, splits):
 	Given a historical list of split edges, creates a dendrogram 
 	by calculating the merges. 
 
-	Unfortunately, runs in O(n^2). TODO: think about another algorithm
-	(perhaps a tree approach?) that does better. This is a useful function
+	Runs in O(nlgn) (But really, close to O(n).) This is a useful function
 	for any divisive algorithm for which splits can be saved more easily
 	than merges.
 	"""
@@ -86,27 +86,26 @@ def createDendrogram(G, splits):
 		# most recent split popped off
 		edge = splits.pop()
 
-		edge = findMergedIds(edge, mergeDict)
+		# Get the values the dendrogram wants for each vertex by finding
+		# where merges have already happened.
+		edge = [traverse(vertex, mergeDict) for vertex in edge]
 
 		merges += [edge]
-		
-		# since we have merged 2 vertices, we have to replace
-		# all occurences of those vertices with the new 
-		# "merged" index n.
+
+		# Update the dict to reflect a new merge.
 		for vertex in edge:
 			mergeDict[vertex] = n
-	#	splits = replaceOccurences(splits, n, edge)
 		
 		n += 1
 
 	return ig.VertexDendrogram(G, merges)
 
 
-
-def findMergedIds(edge, mergeDict):
-	return [traverse(vertex, mergeDict) for vertex in edge]
-
 def traverse(vertex, mergeDict):
+	"""
+	Given a vertex and a dictionaty of merges, returns the id of the cluster
+	the vertex belongs to.
+	"""
 	while vertex in mergeDict:
 		vertex = mergeDict[vertex]
 	return vertex
