@@ -28,7 +28,7 @@ def gn(origGraph):
 		edge_betweennesses = G.edge_betweenness()
 
 		# returns an arbitrary index if there is a tie at max.
-		# TODO: check if numpy copies array,
+		# TODO: check which index numpy returns
 		max_index = numpy.argmax(edge_betweennesses) #check if numpy copies array
 
 		# edge with the max betweenness
@@ -43,7 +43,7 @@ def gn(origGraph):
 
 	vd = createDendrogram(origGraph, splits)
 
-	# TODO: make bug report. If we don't call this then as_clustering() fails.
+	# If we don't call this then as_clustering() fails. I submitted a bugfix.
 	vd.optimal_count 
 
 	return vd
