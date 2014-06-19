@@ -1,8 +1,6 @@
 import igraph as ig
 import numpy
 import sys
-from copy import deepcopy
-
 
 
 def gn(origGraph):
@@ -21,7 +19,7 @@ def gn(origGraph):
 	# initialize a list of removed edges that result in a split of the graph
 	splits = []
 
-	G = deepcopy(origGraph)
+	G = origGraph.copy() 
 
 	while G.es:
 
@@ -31,10 +29,10 @@ def gn(origGraph):
 
 		# returns an arbitrary index if there is a tie at max.
 		# TODO: find which index argmax actually returns.
-		max_index = numpy.argmax(edge_betweennesses)
+		max_index = numpy.argmax(edge_betweennesses) #check if numpy copies array
 
 		# edge with the max betweenness
-		edge = G.get_edgelist()[max_index]
+		edge = G.es[max_index].tuple
 
 		G.delete_edges(edge)
 
@@ -43,21 +41,12 @@ def gn(origGraph):
 			# edge is a tuple, but we want a list of lists.
 			splits += [list(edge)]
 
-	return createDendrogram(origGraph, splits)
+	vd = createDendrogram(origGraph, splits)
 
+	vd.optimal_count # TODO: make bug report
 
-def getOptimalClustering(dendro):
-	"""
-	Given a VertexDendrogram, returns the optimal VertexClustering
-	(calculated from modularity). 
-	"""
-	# calculates the modularities of all clusters 
-	# and chooses the optimal one. Don't be fooled
-	# by the lack of parentheses, it calls a method
-	# if unassigned!
-	dendro.optimal_count
+	return vd
 
-	return dendro.as_clustering()
 
 def splitGraph(G, edge):
 	""" 
@@ -72,6 +61,7 @@ def splitGraph(G, edge):
 		Checks to see if removing edge from G splits the graph into 2 disjoint
 	communities. If so, returns True, otherwise False.
 	"""
+
 	return not G.edge_disjoint_paths(source=edge[0], target=edge[1])
 
 
@@ -89,16 +79,23 @@ def createDendrogram(G, splits):
 	# To create a dendrogram, new merges have id of max id + 1
 	n = len(splits) + 1
 	merges = []
+
+	mergeDict = {}
+
 	while splits:
 		# most recent split popped off
 		edge = splits.pop()
+
+		edge = findMergedIds(edge, mergeDict)
 
 		merges += [edge]
 		
 		# since we have merged 2 vertices, we have to replace
 		# all occurences of those vertices with the new 
 		# "merged" index n.
-		splits = replaceOccurences(splits, n, edge)
+		for vertex in edge:
+			mergeDict[vertex] = n
+	#	splits = replaceOccurences(splits, n, edge)
 		
 		n += 1
 
@@ -106,16 +103,13 @@ def createDendrogram(G, splits):
 
 
 
-def replaceOccurences(splits, n, edge):
-	"""
-	Given a 2d list `splits`, replaces all occurences of elements in
-	`edge` with n.
-	"""
-	for i in range(len(splits)):
-		for j in range(2):
-			if splits[i][j] in edge:
-				splits[i][j] = n
-	return splits
+def findMergedIds(edge, mergeDict):
+	return [traverse(vertex, mergeDict) for vertex in edge]
+
+def traverse(vertex, mergeDict):
+	while vertex in mergeDict:
+		vertex = mergeDict[vertex]
+	return vertex
 
 
 
