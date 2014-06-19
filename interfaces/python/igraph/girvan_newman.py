@@ -1,8 +1,6 @@
 import igraph as ig
 import numpy
 import sys
-from copy import deepcopy
-
 
 
 def gn(origGraph):
@@ -21,7 +19,7 @@ def gn(origGraph):
 	# initialize a list of removed edges that result in a split of the graph
 	splits = []
 
-	G = deepcopy(origGraph)
+	G = origGraph.copy() 
 
 	while G.es:
 
@@ -30,11 +28,11 @@ def gn(origGraph):
 		edge_betweennesses = G.edge_betweenness()
 
 		# returns an arbitrary index if there is a tie at max.
-		# TODO: find which index argmax actually returns.
-		max_index = numpy.argmax(edge_betweennesses)
+		# TODO: check which index numpy returns
+		max_index = numpy.argmax(edge_betweennesses) #check if numpy copies array
 
 		# edge with the max betweenness
-		edge = G.get_edgelist()[max_index]
+		edge = G.es[max_index].tuple
 
 		G.delete_edges(edge)
 
@@ -43,21 +41,13 @@ def gn(origGraph):
 			# edge is a tuple, but we want a list of lists.
 			splits += [list(edge)]
 
-	return createDendrogram(origGraph, splits)
+	vd = createDendrogram(origGraph, splits)
 
+	# If we don't call this then as_clustering() fails. I submitted a bugfix.
+	vd.optimal_count 
 
-def getOptimalClustering(dendro):
-	"""
-	Given a VertexDendrogram, returns the optimal VertexClustering
-	(calculated from modularity). 
-	"""
-	# calculates the modularities of all clusters 
-	# and chooses the optimal one. Don't be fooled
-	# by the lack of parentheses, it calls a method
-	# if unassigned!
-	dendro.optimal_count
+	return vd
 
-	return dendro.as_clustering()
 
 def splitGraph(G, edge):
 	""" 
@@ -72,6 +62,7 @@ def splitGraph(G, edge):
 		Checks to see if removing edge from G splits the graph into 2 disjoint
 	communities. If so, returns True, otherwise False.
 	"""
+
 	return not G.edge_disjoint_paths(source=edge[0], target=edge[1])
 
 
@@ -80,8 +71,7 @@ def createDendrogram(G, splits):
 	Given a historical list of split edges, creates a dendrogram 
 	by calculating the merges. 
 
-	Unfortunately, runs in O(n^2). TODO: think about another algorithm
-	(perhaps a tree approach?) that does better. This is a useful function
+	Runs in O(nlgn) (But really, close to O(n).) This is a useful function
 	for any divisive algorithm for which splits can be saved more easily
 	than merges.
 	"""
@@ -89,33 +79,36 @@ def createDendrogram(G, splits):
 	# To create a dendrogram, new merges have id of max id + 1
 	n = len(splits) + 1
 	merges = []
+
+	mergeDict = {}
+
 	while splits:
 		# most recent split popped off
 		edge = splits.pop()
 
+		# Get the values the dendrogram wants for each vertex by finding
+		# where merges have already happened.
+		edge = [traverse(vertex, mergeDict) for vertex in edge]
+
 		merges += [edge]
-		
-		# since we have merged 2 vertices, we have to replace
-		# all occurences of those vertices with the new 
-		# "merged" index n.
-		splits = replaceOccurences(splits, n, edge)
+
+		# Update the dict to reflect a new merge.
+		for vertex in edge:
+			mergeDict[vertex] = n
 		
 		n += 1
 
 	return ig.VertexDendrogram(G, merges)
 
 
-
-def replaceOccurences(splits, n, edge):
+def traverse(vertex, mergeDict):
 	"""
-	Given a 2d list `splits`, replaces all occurences of elements in
-	`edge` with n.
+	Given a vertex and a dictionaty of merges, returns the id of the cluster
+	the vertex belongs to.
 	"""
-	for i in range(len(splits)):
-		for j in range(2):
-			if splits[i][j] in edge:
-				splits[i][j] = n
-	return splits
+	while vertex in mergeDict:
+		vertex = mergeDict[vertex]
+	return vertex
 
 
 
