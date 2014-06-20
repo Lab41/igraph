@@ -1,12 +1,16 @@
 import numpy as np
 import collections as co
 import igraph as ig
-
+import operator
 
 G = ig.read("sampleGraphs/football.gml")
 OG = ig.read("sampleGraphs/football.gml")
 
 #todo: look at vertex cover
+
+
+
+
 
 def CONGA(G):
     
@@ -15,14 +19,18 @@ def CONGA(G):
 
     # initialize the modularity
     maxMod = 0
+
+
+    splits = []
     
     # run this loop, at worst, until we have no edges left
-    while len(G.get_edgelist()) > 1:
+    while G.es:
 
 
         # calculate edge betweenness list
         eb = G.edge_betweenness()
         
+        max_index, max_eb = max(enumerate(eb), key=operator.itemgetter(1))
         # TODO we think we can caluculate vertex betweenness and edge betweenness at the same time
         
         # calculate vertex betweenness and store it
@@ -30,16 +38,20 @@ def CONGA(G):
         
         # make a list of verticies where the vertex betweenness is greater than the max
         # edge betweenness. This comes from Gregory 2007 step 3
-        vi = [vb.index(i) for i in vb if i >=max(eb)]
+        vi = [vb.index(i) for i in vb if i >= max_eb]
         
         # find the position within eb of the max, and then grab the corresponding edge from
         # the edge list
-        edge = G.get_edgelist()[eb.index(max(eb))]
+
+        edge = G.es[max_index].tuple
         
         # Check to see if we have any verticies of interest. If not, then remove the edge with
         # the max edge betweenness. Else continue with calculating pair and split betweenness
-        if len(vi) == 0:
-            G.delete_edges(edge)
+        if not vi:
+
+            delete_edge(G, edge, splits)
+
+
         else:
                 
             # Calculate pair betweenness. This is a nested dictionary where the first key is
@@ -54,10 +66,10 @@ def CONGA(G):
             # if the split betweenness is greater than the max edge betweenness, then we want
             # to make the split at the spot identified by the split betweenenss function above
             # else remove the maximum edge
-            if vMax > max(eb):
+            if vMax > max_eb:
                 splitVertex(vNum,vSpl)
             else:
-                G.delete_edges(edge)
+                delete_edge(G, edge, splits)
         
         # get current communities
         comm = G.components().membership        
@@ -84,9 +96,21 @@ def default_factory():
     return 1.
 
 
+def delete_edge(G, edge, splits):
+    """ 
+    Given a graph G and one of its edges in tuple form, checks if the deletion 
+    splits the graph. If so, it adds the edge to the splitlist.
+    """
+    G.delete_edges(edge)
+
+    # if the graph has been split by this deletion
+    if not G.edge_disjoint_paths(source=edge[0], target=edge[1]):
+        splits += [list(edge)]
+
+
 
 def nepusz_modularity(G):
-
+    pass
 
 
 
