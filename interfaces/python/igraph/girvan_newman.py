@@ -1,5 +1,5 @@
 import igraph as ig
-import numpy
+import operator
 import sys
 
 
@@ -27,9 +27,8 @@ def gn(origGraph):
 		# TODO: only recalculate on relevant portions
 		edge_betweennesses = G.edge_betweenness()
 
-		# returns an arbitrary index if there is a tie at max.
-		# TODO: check which index numpy returns
-		max_index = numpy.argmax(edge_betweennesses) #check if numpy copies array
+		# returns an the first index if there is a tie at max.
+		max_index, _ = max(enumerate(edge_betweennesses), key=operator.itemgetter(1))
 
 		# edge with the max betweenness
 		edge = G.es[max_index].tuple
@@ -43,7 +42,7 @@ def gn(origGraph):
 
 	vd = createDendrogram(origGraph, splits)
 
-	# If we don't call this then as_clustering() fails. I submitted a bugfix.
+	# If we don't call this then as_clustering() fails. bugfix in development branch.
 	vd.optimal_count 
 
 	return vd
