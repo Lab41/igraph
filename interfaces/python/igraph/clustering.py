@@ -970,7 +970,6 @@ class VertexDendrogram(Dendrogram):
         this method calculates the optimal number of clusters by maximizing
         the modularity along all the possible cuts in the dendrogram.
         """
-        print "checking"
         if self._optimal_count is not None:
             return self._optimal_count
 
@@ -983,7 +982,6 @@ class VertexDendrogram(Dendrogram):
                 optimal_count = n-step
                 max_q = q
         self._optimal_count = optimal_count
-        return self._optimal_count
 
     @optimal_count.setter
     def optimal_count(self, value):
