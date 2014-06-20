@@ -67,7 +67,7 @@ def CONGA(G):
             # to make the split at the spot identified by the split betweenenss function above
             # else remove the maximum edge
             if vMax > max_eb:
-                splitVertex(vNum,vSpl)
+                splitVertex(vNum,vSpl, splits)
             else:
                 delete_edge(G, edge, splits)
         
@@ -104,9 +104,12 @@ def delete_edge(G, edge, splits):
     G.delete_edges(edge)
 
     # if the graph has been split by this deletion
+    check_for_split(splits, edge)
+
+
+def check_for_split(splits, edge):
     if not G.edge_disjoint_paths(source=edge[0], target=edge[1]):
         splits += [list(edge)]
-
 
 
 def nepusz_modularity(G):
@@ -307,46 +310,34 @@ def reduceMatrix(M):
     return i,j,M
 
 
-def splitVertex(v,s):
-    # we receive a passed in vertex and optimal split list
-    # store the original name of the id
-    name = G.vs[v]['orig']
-    
-    # store the original label of the id
-    label = G.vs[v]['label']
-    
-    # we're going to increment the ids by 1, so this is the next id in the graph
-    newId = int(max(G.vs['id'])) + 1
-    
+def splitVertex(v,s, splits):
+    # CHECK might be broken.
     # this is where the new vertex is going to go
-    newVert = len(G.vs['id'])
+    new_index = len(G.vs['id'])
     
     # add the new vertex and preserve the label and the original name
-    G.add_vertex(newVert)
-    G.vs[newVert]['label'] = label
-    G.vs[newVert]['orig'] = name
+    G.add_vertex()
+    G.vs[new_index]['label'] = label = G.vs[v]['label']
+    G.vs[new_index]['orig'] = name = G.vs[v]['orig']
     
-    # set the new vertex to its new id
-    G.vs[newVert]['id'] = float(newId)
-    
-    # add the edges back based on the first optimal split
+    # adding all relevant edges to new vertex, deleting
+    # from old one.
+
+    print set(G.neighborhood(vertices=v)) == set(s[0] + s[1] + [v])
+
     for partner in s[0]:
-        G.add_edge(newVert,partner)
-    
-    # the next block is the same as above, except for the second half of the
-    # optimal split
-    newId = int(max(G.vs['id'])) + 1
-    newVert = len(G.vs['id'])
-    G.add_vertex(newVert)
-    G.vs[newVert]['label'] = label
-    G.vs[newVert]['orig'] = name
-        
-    G.vs[newVert]['id'] = float(newId)
-    for partner in s[1]:
-        G.add_edge(newVert,partner)
-        
-    G.delete_vertices(v)
-    return
+        # TODO: use zip or something with add_edges
+        G.add_edge(new_index, partner)
+        G.delete_edges((v, partner)) 
+
+    # TODO NEXT STEP keep record of what vertices split into. Perhaps a dict.
+
+    # check if the two new vertices are disconnected.
+    check_for_split(splits, (v, new_index))
+
+
+
+
     
     
 def matcher(orig,comm):
